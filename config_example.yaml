@@ -1,0 +1,20 @@
+bot:
+  # Bot Framework / Azure AD に登録したアプリケーション ID を指定する
+  microsoft_app_id: ""
+  # Bot Framework / Azure AD に登録したアプリケーション パスワード（クライアントシークレット）を指定する
+  microsoft_app_password: ""
+
+server:
+  # uvicorn / FastAPI が待ち受けるホスト名
+  host: "0.0.0.0"
+  # uvicorn / FastAPI が待ち受けるポート番号
+  port: 3978
+
+llm:
+  # ローカル LLM サーバーのベース URL（LM Studio / vLLM などの OpenAI 互換エンドポイント）
+  base_url: "http://localhost:1234"
+  # チャット補完用のパス（OpenAI 互換の /v1/chat/completions を想定）
+  chat_path: "/v1/chat/completions"
+  # 利用するモデル名（ローカル LLM 側で設定したモデル ID）
+  model: "local-model"
+

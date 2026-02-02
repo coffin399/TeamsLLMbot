@@ -90,7 +90,7 @@ uvicorn src.bot.server:app --host 0.0.0.0 --port 3978 --reload
 
 - エンドポイント: `http://localhost:1234/v1/chat/completions`（例）
 - メソッド: `POST`
-- ボディ（例）:
+- ボディ（例・ストリーミング OFF の場合）:
 
 ```json
 {
@@ -102,6 +102,35 @@ uvicorn src.bot.server:app --host 0.0.0.0 --port 3978 --reload
 ```
 
 レスポンスは OpenAI 互換 (`choices[0].message.content`) を想定します。
+
+### ストリーミング有効時（疑似ストリーミング表示用）
+
+`src/bot/llm_client.py` では OpenAI 互換のストリーミング API を利用して、  
+Bot 側でメッセージを数回に分けて更新する「疑似ストリーミング」を実装しています。
+
+- リクエスト例:
+
+```json
+{
+  "model": "local-model",
+  "messages": [
+    { "role": "system", "content": "..." },
+    { "role": "user", "content": "こんにちは" }
+  ],
+  "stream": true
+}
+```
+
+- レスポンス形式（例）:
+
+```text
+data: {"choices":[{"delta":{"content":"こん"},"finish_reason":null}]}
+data: {"choices":[{"delta":{"content":"にちは"},"finish_reason":null}]}
+data: {"choices":[{"delta":{"content":"！"},"finish_reason":"stop"}]}
+data: [DONE]
+```
+
+LM Studio / vLLM 側で OpenAI 互換の `stream: true` と上記のような SSE (`data: ...`) 出力を有効にしておく必要があります。
 
 `config.yaml` の `llm` セクションを編集することで、  
 任意のローカル LLM サーバーに接続できます。

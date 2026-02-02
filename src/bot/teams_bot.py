@@ -76,20 +76,36 @@ class TeamsLLMBot(ActivityHandler):
         # 直近 10 往復分（ユーザーと Bot のセット）に相当する 20 件だけを LLM に渡すためにスライス
         limited_history = history[-20:] if len(history) > 20 else history
 
-        # ローカル LLM クライアントを利用してユーザー発言と履歴に対する応答文を非同期で生成
-        llm_reply_text = await llm_client.generate_reply(
+        # first response として簡易メッセージを送信し、その Activity を後から上書き更新する
+        initial_text = "考えています..."  # ユーザーに処理中であることを伝えるプレースホルダテキスト
+        # MessageFactory.text を利用して初期メッセージ Activity を生成
+        reply_activity = MessageFactory.text(initial_text)
+        # 生成した Activity を送信し、その結果として返る ResourceResponse から ID を取得
+        resource = await turn_context.send_activity(reply_activity)
+        # 後続の update_activity で利用するため、送信した Activity に ID を設定
+        reply_activity.id = resource.id
+
+        # LLM から受信したチャンクを結合していくためのバッファ文字列を初期化
+        accumulated_text = ""
+        # ローカル LLM クライアントのストリーミングメソッドを利用して疑似ストリーミングを実現
+        async for chunk in llm_client.stream_reply(
             user_message=user_text,
             history_messages=limited_history,
-        )
-        # LLM からの応答テキストを基に Bot からの返信 Activity を生成
-        reply_activity = MessageFactory.text(llm_reply_text)
-        # 生成した返信 Activity を現在の会話コンテキストに対して送信
-        await turn_context.send_activity(reply_activity)
+        ):
+            # 新たに受信したチャンク文字列をバッファ末尾に追加
+            accumulated_text += chunk
+            # Activity のテキスト部分を現在までの全文に更新
+            reply_activity.text = accumulated_text
+            # update_activity を呼び出して既存メッセージを上書き更新し、画面上で伸びていくように見せる
+            await turn_context.update_activity(reply_activity)
+
+        # 最終的な応答テキストとして、蓄積された全文を変数に保存
+        final_text = accumulated_text or initial_text
 
         # 今回のユーザーメッセージと LLM 応答を履歴リストの末尾に追加
         new_history = history + [
             {"role": "user", "content": user_text},
-            {"role": "assistant", "content": llm_reply_text},
+            {"role": "assistant", "content": final_text},
         ]
         # 履歴が 10 往復分（20 メッセージ）を超える場合は末尾 20 件だけ残す
         if len(new_history) > 20:

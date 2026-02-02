@@ -164,13 +164,10 @@ LM Studio / vLLM 側で OpenAI 互換の `stream: true` と上記のような SS
 
 #### 2. cloudflared のセットアップ（サーバー PC 側）
 
-```bash
-# 例: Chocolatey を使う場合
-choco install cloudflared
-```
+- `cloudflared.exe` をこのリポジトリ直下（`TeamsLLMbot` ディレクトリ）に配置しておきます。
 
 ```bash
-cloudflared login
+.\cloudflared.exe login
 ```
 
 - ブラウザで Cloudflare にログインし、対象ドメインを選択すると証明書が保存されます。
@@ -178,7 +175,7 @@ cloudflared login
 #### 3. トンネル作成
 
 ```bash
-cloudflared tunnel create teams-llm-bot
+.\cloudflared.exe tunnel create teams-llm-bot
 ```
 
 - Cloudflare ダッシュボード → Zero Trust → Access → Tunnels から `teams-llm-bot` を選択。
@@ -190,7 +187,7 @@ cloudflared tunnel create teams-llm-bot
 #### 4. トンネル起動
 
 ```bash
-cloudflared tunnel run teams-llm-bot
+.\cloudflared.exe tunnel run teams-llm-bot
 ```
 
 - これで `https://bot.example.com/api/messages` がローカルの  

@@ -29,6 +29,8 @@ class Settings:
     port: int
     # ローカル LLM に渡すシステムプロンプト
     llm_system_prompt: str
+    # 利用するローカル LLM が画像入力に対応しているかどうかを表すフラグ
+    llm_supports_vision: bool
 
 
 def _project_root() -> Path:
@@ -108,6 +110,8 @@ def load_settings() -> Settings:
     llm_model = str(llm_cfg.get("model", "local-model"))
     # システムプロンプトを llm セクションから取得し、未設定なら空文字列を利用
     llm_system_prompt = str(llm_cfg.get("system_prompt", ""))
+    # Vision 対応フラグを llm セクションから取得し、未設定なら False を利用
+    llm_supports_vision = bool(llm_cfg.get("supports_vision", False))
 
     # HTTP サーバーのホスト名を server セクションから取得し、未設定なら 0.0.0.0 を利用
     host = str(server_cfg.get("host", "0.0.0.0"))
@@ -124,6 +128,7 @@ def load_settings() -> Settings:
         llm_chat_path=llm_chat_path,
         llm_model=llm_model,
         llm_system_prompt=llm_system_prompt,
+        llm_supports_vision=llm_supports_vision,
         host=host,
         port=port,
     )

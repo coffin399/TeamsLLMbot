@@ -63,6 +63,7 @@ llm:
   chat_path: "/v1/chat/completions"
   model: "local-model"
   system_prompt: "ここに Bot 全体で使うシステムプロンプトを書く"
+  supports_vision: false  # 画像入力に対応したモデルを使う場合は true にする
 ```
 
 LM Studio や vLLM など OpenAI 互換エンドポイントを提供するサーバーであれば、  
@@ -131,6 +132,16 @@ data: [DONE]
 ```
 
 LM Studio / vLLM 側で OpenAI 互換の `stream: true` と上記のような SSE (`data: ...`) 出力を有効にしておく必要があります。
+
+### 画像入力（Vision 対応モデルを利用する場合）
+
+- `config.yaml` の `llm.supports_vision` を `true` に設定すると、  
+  Teams メッセージに添付された画像を OpenAI 互換の `image_url` 形式で LLM に渡します。
+- Vision 非対応モデル（`supports_vision: false`）のまま画像が添付された場合は、
+  - テキストのみで応答を生成
+  - Bot の応答文末に  
+    `<sub>画像認識には対応していないモデルです。</sub>`  
+    という注意書きが小さく追記されます。
 
 `config.yaml` の `llm` セクションを編集することで、  
 任意のローカル LLM サーバーに接続できます。

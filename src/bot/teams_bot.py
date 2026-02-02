@@ -11,11 +11,13 @@ from botbuilder.core import (  # Bot Framework のコア機能を提供するク
 )
 from botbuilder.schema import (  # アクティビティ種別などのスキーマ定義をインポート
     Activity,
+    Attachment,
     ChannelAccount,
     Entity,
 )
 
 from .llm_client import llm_client  # ローカル LLM クライアントをインポート
+from .settings import settings  # Vision 対応フラグなどの設定値をインポート
 
 
 class TeamsLLMBot(ActivityHandler):
@@ -76,6 +78,21 @@ class TeamsLLMBot(ActivityHandler):
         # 直近 10 往復分（ユーザーと Bot のセット）に相当する 20 件だけを LLM に渡すためにスライス
         limited_history = history[-20:] if len(history) > 20 else history
 
+        # 現在のアクティビティに含まれる添付ファイル一覧を取得し、存在しない場合は空リストを利用
+        attachments: list[Attachment] = turn_context.activity.attachments or []
+        # 画像コンテンツタイプを持つ添付ファイルのみを抽出して画像 URL のリストを作成
+        image_urls: list[str] = []
+        for attachment in attachments:
+            # content_type が image/ で始まる場合にのみ画像として扱う
+            content_type = (attachment.content_type or "").lower()
+            if content_type.startswith("image/"):
+                # Teams からの添付では content_url に画像取得用の URL が格納されている想定
+                if attachment.content_url:
+                    image_urls.append(attachment.content_url)
+
+        # Vision 非対応モデルで画像が添付されている場合に、注意書きを追加するかどうかのフラグ
+        should_append_vision_note = bool(image_urls and not settings.llm_supports_vision)
+
         # first response として簡易メッセージを送信し、その Activity を後から上書き更新する
         initial_text = "考えています..."  # ユーザーに処理中であることを伝えるプレースホルダテキスト
         # MessageFactory.text を利用して初期メッセージ Activity を生成
@@ -91,6 +108,7 @@ class TeamsLLMBot(ActivityHandler):
         async for chunk in llm_client.stream_reply(
             user_message=user_text,
             history_messages=limited_history,
+            image_urls=image_urls if settings.llm_supports_vision else None,
         ):
             # 新たに受信したチャンク文字列をバッファ末尾に追加
             accumulated_text += chunk
@@ -101,6 +119,17 @@ class TeamsLLMBot(ActivityHandler):
 
         # 最終的な応答テキストとして、蓄積された全文を変数に保存
         final_text = accumulated_text or initial_text
+
+        # Vision 非対応モデルかつ画像が添付されていた場合は文末に注意書きを追加
+        if should_append_vision_note:
+            # Markdown のサブスクリプト表現を用いて目立ちすぎない注意書きを追記
+            final_text = (
+                f"{final_text}\n\n"
+                "<sub>画像認識には対応していないモデルです。</sub>"
+            )
+            # Activity テキストも最終版に更新してから update_activity を一度だけ呼び出す
+            reply_activity.text = final_text
+            await turn_context.update_activity(reply_activity)
 
         # 今回のユーザーメッセージと LLM 応答を履歴リストの末尾に追加
         new_history = history + [

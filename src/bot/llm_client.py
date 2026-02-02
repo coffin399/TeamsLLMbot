@@ -20,18 +20,39 @@ class LocalLLMClient:
         # 共通で利用する HTTP タイムアウト秒数を属性として保持
         self._timeout_seconds = 60.0
 
-    async def generate_reply(self, user_message: str) -> str:
-        """ユーザーからのメッセージをローカル LLM に渡し、返信テキストを返す非同期メソッド。"""
+    async def generate_reply(
+        self,
+        user_message: str,
+        history_messages: list[dict[str, Any]] | None = None,
+    ) -> str:
+        """ユーザーからのメッセージと履歴をローカル LLM に渡し、返信テキストを返す非同期メソッド。"""
 
+        # LLM に渡すメッセージ一覧を初期化するための空リストを用意
+        messages: list[dict[str, Any]] = []
+        # 設定でシステムプロンプトが指定されている場合は最初のメッセージとして追加
+        if settings.llm_system_prompt:
+            # system 役割のメッセージ辞書を作成し messages リストに追加
+            messages.append(
+                {
+                    "role": "system",
+                    "content": settings.llm_system_prompt,
+                },
+            )
+        # 呼び出し元から渡された会話履歴メッセージがあれば順番どおりに追加
+        if history_messages:
+            # 履歴メッセージは既に role / content を含むと想定し、そのまま extend する
+            messages.extend(history_messages)
+        # ユーザーからの入力メッセージを role=user のメッセージとしてリストに追加
+        messages.append(
+            {
+                "role": "user",
+                "content": user_message,
+            },
+        )
         # OpenAI 互換のチャット補完 API 形式に従ってリクエストボディを構築
         payload: dict[str, Any] = {
             "model": settings.llm_model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": user_message,
-                }
-            ],
+            "messages": messages,
         }
         # 非同期 HTTP クライアントコンテキストを開き、リクエスト完了後に自動クローズさせる
         async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:

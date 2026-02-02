@@ -62,6 +62,7 @@ llm:
   base_url: "http://localhost:1234"
   chat_path: "/v1/chat/completions"
   model: "local-model"
+  system_prompt: "ここに Bot 全体で使うシステムプロンプトを書く"
 ```
 
 LM Studio や vLLM など OpenAI 互換エンドポイントを提供するサーバーであれば、  

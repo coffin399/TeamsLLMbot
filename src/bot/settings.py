@@ -27,6 +27,8 @@ class Settings:
     host: str
     # FastAPI / uvicorn が待ち受けるポート番号
     port: int
+    # ローカル LLM に渡すシステムプロンプト
+    llm_system_prompt: str
 
 
 def _project_root() -> Path:
@@ -104,6 +106,8 @@ def load_settings() -> Settings:
     llm_chat_path = str(llm_cfg.get("chat_path", "/v1/chat/completions"))
     # モデル名を llm セクションから取得し、未設定なら汎用的なモデル名を利用
     llm_model = str(llm_cfg.get("model", "local-model"))
+    # システムプロンプトを llm セクションから取得し、未設定なら空文字列を利用
+    llm_system_prompt = str(llm_cfg.get("system_prompt", ""))
 
     # HTTP サーバーのホスト名を server セクションから取得し、未設定なら 0.0.0.0 を利用
     host = str(server_cfg.get("host", "0.0.0.0"))
@@ -119,6 +123,7 @@ def load_settings() -> Settings:
         llm_base_url=llm_base_url,
         llm_chat_path=llm_chat_path,
         llm_model=llm_model,
+        llm_system_prompt=llm_system_prompt,
         host=host,
         port=port,
     )

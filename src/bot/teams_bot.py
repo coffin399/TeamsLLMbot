@@ -21,6 +21,15 @@ from .llm_client import llm_client  # ローカル LLM クライアントをイ�
 class TeamsLLMBot(ActivityHandler):
     """Teams からのメッセージを受け取りローカル LLM で応答を生成する Bot クラス。"""
 
+    def __init__(self) -> None:
+        """Bot インスタンスの初期化処理を行うコンストラクタ。"""
+
+        # 親クラス ActivityHandler の初期化処理を呼び出し、基底の状態を正しく設定
+        super().__init__()
+        # 会話単位でメッセージ履歴を保持するための辞書を初期化
+        # キー: 会話 ID、値: role / content を持つメッセージ辞書のリスト
+        self._conversation_histories: dict[str, list[dict[str, str]]] = {}
+
     async def on_message_activity(self, turn_context: TurnContext) -> None:
         """ユーザーからメッセージが送信された際に呼び出されるハンドラ。"""
 
@@ -60,12 +69,33 @@ class TeamsLLMBot(ActivityHandler):
             # これ以上の処理は不要なため早期 return でハンドラを終了
             return
 
-        # ローカル LLM クライアントを利用してユーザー発言に対する応答文を非同期で生成
-        llm_reply_text = await llm_client.generate_reply(user_text)
+        # 会話 ID を取得し、履歴辞書から該当会話のメッセージ履歴を取り出す
+        conversation_id = turn_context.activity.conversation.id
+        # 指定された会話 ID に対する履歴が存在しなければ空リストを利用
+        history = self._conversation_histories.get(conversation_id, [])
+        # 直近 10 往復分（ユーザーと Bot のセット）に相当する 20 件だけを LLM に渡すためにスライス
+        limited_history = history[-20:] if len(history) > 20 else history
+
+        # ローカル LLM クライアントを利用してユーザー発言と履歴に対する応答文を非同期で生成
+        llm_reply_text = await llm_client.generate_reply(
+            user_message=user_text,
+            history_messages=limited_history,
+        )
         # LLM からの応答テキストを基に Bot からの返信 Activity を生成
         reply_activity = MessageFactory.text(llm_reply_text)
         # 生成した返信 Activity を現在の会話コンテキストに対して送信
         await turn_context.send_activity(reply_activity)
+
+        # 今回のユーザーメッセージと LLM 応答を履歴リストの末尾に追加
+        new_history = history + [
+            {"role": "user", "content": user_text},
+            {"role": "assistant", "content": llm_reply_text},
+        ]
+        # 履歴が 10 往復分（20 メッセージ）を超える場合は末尾 20 件だけ残す
+        if len(new_history) > 20:
+            new_history = new_history[-20:]
+        # 更新済みの履歴を会話 ID をキーとして辞書に保存
+        self._conversation_histories[conversation_id] = new_history
 
     async def on_turn(
         self,

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.0",
+  "id": "<<YOUR_APP_ID>>",
+  "packageName": "com.example.teams-llm-bot",
+  "name": {
+    "short": "Teams LLM Bot",
+    "full": "Teams Local LLM Bot"
+  },
+  "developer": {
+    "name": "Your Name or Org",
+    "websiteUrl": "https://<<YOUR_DOMAIN>>/",
+    "privacyUrl": "https://<<YOUR_DOMAIN>>/privacy",
+    "termsOfUseUrl": "https://<<YOUR_DOMAIN>>/terms"
+  },
+  "description": {
+    "short": "Bot that connects Teams to a local LLM (LM Studio, vLLM, etc.)",
+    "full": "A Microsoft Teams bot that forwards messages (with @mention) to a locally running LLM with an OpenAI-compatible API such as LM Studio or vLLM."
+  },
+  "accentColor": "#336699",
+  "bots": [
+    {
+      "botId": "<<YOUR_APP_ID>>",
+      "scopes": [
+        "personal",
+        "team",
+        "groupchat"
+      ],
+      "supportsFiles": false,
+      "isNotificationOnly": false,
+      "commandLists": [
+        {
+          "scopes": [
+            "personal",
+            "team",
+            "groupchat"
+          ],
+          "commands": [
+            {
+              "title": "chat",
+              "description": "Chat with the local LLM."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "<<YOUR_DOMAIN>>"
+  ]
+}
+

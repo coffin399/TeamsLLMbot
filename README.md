@@ -107,10 +107,20 @@ uvicorn src.bot.server:app --host 0.0.0.0 --port 3978 --reload
 
 ## Teams 側との連携の概要
 
-1. このボットサーバーをインターネットに公開する（例: ngrok）。
+1. このボットサーバーをインターネットから到達可能にする。  
+   - 例: サーバー PC をそのまま公開し `https://<サーバーの FQDN>/api/messages` にルーティング。  
+   - あるいは、リバースプロキシ（nginx / IIS など）で 443 → 3978 に転送。
 2. Microsoft Bot Framework で Bot リソースを作成し、メッセージエンドポイントを  
-   `https://<公開URL>/api/messages` に設定。
+   `https://<サーバーの FQDN>/api/messages` に設定。
 3. チャネル設定で Teams を有効化。
+
+### Teams Toolkit と一緒に使う場合（VS Code）
+
+- VS Code に **Teams Toolkit** 拡張機能をインストール。
+- 「既存アプリケーションをインポート」シナリオとして、このリポジトリを選択。  
+- `teams_manifest.json` を Teams アプリのマニフェストとして利用し、`<<YOUR_APP_ID>>` と `<<YOUR_DOMAIN>>` を書き換える。
+- Teams Toolkit から Azure / Teams へアプリをアップロード・管理すれば、  
+  バックエンドはこの Python Bot（`/api/messages`）をそのまま利用できます。
 
 Bot Framework / Azure Portal での詳細な設定手順は公式ドキュメントを参照してください。
 

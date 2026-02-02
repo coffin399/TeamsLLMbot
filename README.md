@@ -149,11 +149,72 @@ LM Studio / vLLM 側で OpenAI 互換の `stream: true` と上記のような SS
 ## Teams 側との連携の概要
 
 1. このボットサーバーをインターネットから到達可能にする。  
-   - 例: サーバー PC をそのまま公開し `https://<サーバーの FQDN>/api/messages` にルーティング。  
+   - 推奨: Cloudflare Tunnel 経由で公開し、`https://<任意のドメイン>/api/messages` にルーティング。
    - あるいは、リバースプロキシ（nginx / IIS など）で 443 → 3978 に転送。
 2. Microsoft Bot Framework で Bot リソースを作成し、メッセージエンドポイントを  
-   `https://<サーバーの FQDN>/api/messages` に設定。
+   `https://<公開 URL>/api/messages` に設定。
 3. チャネル設定で Teams を有効化。
+
+### Cloudflare Tunnel を使った公開例
+
+#### 1. 前提
+
+- Bot サーバーはローカルで `http://127.0.0.1:3978/api/messages` を待ち受け。
+- Cloudflare で管理されているドメイン（例: `example.com`）を持っている。
+
+#### 2. cloudflared のセットアップ（サーバー PC 側）
+
+```bash
+# 例: Chocolatey を使う場合
+choco install cloudflared
+```
+
+```bash
+cloudflared login
+```
+
+- ブラウザで Cloudflare にログインし、対象ドメインを選択すると証明書が保存されます。
+
+#### 3. トンネル作成
+
+```bash
+cloudflared tunnel create teams-llm-bot
+```
+
+- Cloudflare ダッシュボード → Zero Trust → Access → Tunnels から `teams-llm-bot` を選択。
+- 「Public Hostname」を追加し、以下のように設定:
+  - Hostname: `bot.example.com`
+  - Type: `HTTP`
+  - URL: `http://127.0.0.1:3978`
+
+#### 4. トンネル起動
+
+```bash
+cloudflared tunnel run teams-llm-bot
+```
+
+- これで `https://bot.example.com/api/messages` がローカルの  
+  `http://127.0.0.1:3978/api/messages` に転送されます。
+
+#### 5. Azure Bot Framework 側の設定
+
+1. Azure Portal で「Bot Channels Registration」または「Azure Bot」を作成。
+2. Bot の設定画面で:
+   - Messaging endpoint を `https://bot.example.com/api/messages` に設定。
+   - Microsoft App ID / Password（シークレット）を発行。
+3. このリポジトリの `config.yaml` の `bot` セクションに、取得した App ID / Password を設定。
+
+```yaml
+bot:
+  microsoft_app_id: "YOUR_APP_ID"
+  microsoft_app_password: "YOUR_APP_PASSWORD"
+```
+
+#### 6. Teams 側での利用
+
+- Azure Bot リソースの「チャネル」から Microsoft Teams を有効化。
+- 必要に応じて Teams Toolkit（VS Code）や Teams 管理センターからアプリとしてインストール。  
+  以降、`@Bot名` でメンションすると、このローカル LLM Bot が応答します。
 
 ### Teams Toolkit と一緒に使う場合（VS Code）
 
